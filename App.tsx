@@ -22,7 +22,7 @@ import {
 import ColorPicker from 'react-native-wheel-color-picker';
 import uuid from 'react-native-uuid';
 
-const MESSAGE_URL = 'https://dear-stranger.herokuapp.com/messages'
+const MESSAGE_URL = 'https://dear-stranger.herokuapp.com/messages';
 
 type SmallButtonProps = PropsWithChildren<{
   icon: any;
@@ -100,10 +100,10 @@ function DarkCircularButton({icon, onPress}: SmallButtonProps): JSX.Element {
 
 function App(): JSX.Element {
   const [writeBoxVisible, setwriteBoxVisible] = useState(false);
-  const [color, setColor] = useState('white');
+  const [color, setColor] = useState('#FFF');
   const [body, setBody] = useState('');
 
-  const senderUuid = uuid.v4()
+  const senderUuid = uuid.v4();
 
   const onColorChange = (color: React.SetStateAction<string>) => {
     setColor(color);
