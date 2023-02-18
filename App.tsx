@@ -17,6 +17,9 @@ import {
   TouchableOpacity,
   Modal,
   GestureResponderEvent,
+  Button,
+  SectionList,
+  ScrollView,
 } from 'react-native';
 
 import ColorPicker from 'react-native-wheel-color-picker';
@@ -32,6 +35,12 @@ type SmallButtonProps = PropsWithChildren<{
 type InputProps = PropsWithChildren<{
   input: string;
   onInputChange: ((action: React.SetStateAction<string>) => void) | undefined;
+}>;
+
+type LetterProps = PropsWithChildren<{
+  hue: string;
+  body: string;
+  onPress: ((event: GestureResponderEvent) => void) | undefined;
 }>;
 
 function MoodInput({input, onInputChange}: InputProps): JSX.Element {
@@ -98,8 +107,53 @@ function DarkCircularButton({icon, onPress}: SmallButtonProps): JSX.Element {
   );
 }
 
+function LetterSlot({body, hue, onPress}: LetterProps): JSX.Element {
+  const hueCircle = {
+    height: 30,
+    width: 30,
+    borderRadius: 15,
+    backgroundColor: hue,
+  };
+
+  return (
+    <View style={styles.listItem}>
+      <TouchableOpacity onPress={onPress}>
+        <View style={styles.flexrowed}>
+          <View style={styles.listColumn}>
+            <View style={hueCircle} />
+          </View>
+          <View style={styles.listColumn}>
+            <Text style={styles.letterText}>{body.substring(0, 200)}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function LetterList(): JSX.Element {
+  let letterList: [LetterProps?] = [];
+  for (let i = 0; i < 10; ++i) {
+    letterList.push({
+      body: 'hello',
+      hue: '#FFF',
+      onPress: () => {},
+    });
+  }
+  return (
+    <View>
+      {letterList.map(letterProp => {
+        if (letterProp) {
+          return LetterSlot(letterProp);
+        }
+      })}
+    </View>
+  );
+}
+
 function App(): JSX.Element {
   const [writeBoxVisible, setwriteBoxVisible] = useState(false);
+  const [mailboxVisible, setMailboxVisible] = useState(false);
   const [color, setColor] = useState('#FFF');
   const [body, setBody] = useState('');
 
@@ -135,6 +189,10 @@ function App(): JSX.Element {
       <SafeAreaView style={styles.background}>
         <View style={styles.centeredBox}>
           <Introduction />
+          <Button
+            title="check your mailbox"
+            onPress={() => setMailboxVisible(true)}
+          />
         </View>
       </SafeAreaView>
 
@@ -176,6 +234,33 @@ function App(): JSX.Element {
         </View>
       </Modal>
 
+      <Modal
+        animationType="fade"
+        transparent={false}
+        visible={mailboxVisible}
+        onRequestClose={() => {
+          setMailboxVisible(!mailboxVisible);
+        }}>
+        <View style={styles.background}>
+          <SafeAreaView style={styles.background}>
+            <View style={styles.mailboxHeader}>
+              <Text style={styles.appTitle}>mailbox</Text>
+            </View>
+            <View style={styles.leftHeader}>
+              <DarkCircularButton
+                icon={require('./assets/close.png')}
+                onPress={() => setMailboxVisible(false)}
+              />
+            </View>
+            <View style={styles.body}>
+              <ScrollView style={styles.bodyBuffer}>
+                <LetterList />
+              </ScrollView>
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
       <View style={styles.centeredHeader}>
         <Text style={styles.appTitle}>dear stranger</Text>
       </View>
@@ -202,6 +287,11 @@ const styles = StyleSheet.create({
     left: '34%',
     top: 50,
   },
+  mailboxHeader: {
+    position: 'absolute',
+    left: '40%',
+    top: 50,
+  },
   rightHeader: {
     position: 'absolute',
     right: 0,
@@ -219,7 +309,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   moodItem: {
-    marginTop: 15,
+    marginTop: 25,
   },
   flexbox: {
     flex: 1,
@@ -229,6 +319,16 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  flexrowed: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  bodyBuffer: {
+    marginTop: 20,
+  },
+  listColumn: {
+    padding: 20,
   },
   letterBox: {
     flex: 2,
@@ -240,6 +340,10 @@ const styles = StyleSheet.create({
   },
   letterText: {
     color: 'white',
+  },
+  listItem: {
+    borderColor: 'white',
+    borderBottomWidth: 1,
   },
   background: {
     flex: 1,
