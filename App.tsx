@@ -18,9 +18,9 @@ import {
   Modal,
   GestureResponderEvent,
   Button,
-  SectionList,
   ScrollView,
 } from 'react-native';
+import RNShake from 'react-native-shake';
 
 import ColorPicker from 'react-native-wheel-color-picker';
 import uuid from 'react-native-uuid';
@@ -41,6 +41,10 @@ type LetterProps = PropsWithChildren<{
   hue: string;
   body: string;
   onPress: ((event: GestureResponderEvent) => void) | undefined;
+}>;
+
+type LetterListProps = PropsWithChildren<{
+  letters: [Message?];
 }>;
 
 function MoodInput({input, onInputChange}: InputProps): JSX.Element {
@@ -131,14 +135,73 @@ function LetterSlot({body, hue, onPress}: LetterProps): JSX.Element {
   );
 }
 
-function LetterList(): JSX.Element {
+function LargeLetterSlot({body, hue}: LetterProps): JSX.Element {
+  const hueCircle = {
+    height: 30,
+    width: 30,
+    borderRadius: 15,
+    backgroundColor: hue,
+  };
+
+  return (
+    <View style={styles.flexstacked}>
+      <ScrollView>
+        <View style={styles.listColumn}>
+          <View style={hueCircle} />
+        </View>
+        <View style={styles.listColumn}>
+          <Text style={styles.letterText}>{body}</Text>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function ReplySlot({body}: LetterProps): JSX.Element {
+  return (
+    <View style={styles.replyBox}>
+      <ScrollView>
+        <Text style={styles.letterText}>{body}</Text>
+      </ScrollView>
+    </View>
+  );
+}
+
+class Message {
+  uuid: string;
+  inResponseTo: string;
+  body: string;
+  timestamp: number;
+  hue: string;
+  senderUuid: string;
+
+  constructor(obj: {
+    body: string;
+    hue: string;
+    senderUuid: string;
+    timestamp: number;
+    inResponseTo: string;
+    uuid: string;
+  }) {
+    this.uuid = obj.uuid;
+    this.inResponseTo = obj.inResponseTo;
+    this.body = obj.body;
+    this.timestamp = obj.timestamp;
+    this.hue = obj.hue;
+    this.senderUuid = obj.senderUuid;
+  }
+}
+
+function LetterList({letters}: LetterListProps): JSX.Element {
   let letterList: [LetterProps?] = [];
-  for (let i = 0; i < 10; ++i) {
-    letterList.push({
-      body: 'hello',
-      hue: '#FFF',
-      onPress: () => {},
-    });
+  for (const letter of letters) {
+    if (letter) {
+      letterList.push({
+        body: letter.body,
+        hue: letter.hue,
+        onPress: () => {},
+      });
+    }
   }
   return (
     <View>
@@ -154,6 +217,8 @@ function LetterList(): JSX.Element {
 function App(): JSX.Element {
   const [writeBoxVisible, setwriteBoxVisible] = useState(false);
   const [mailboxVisible, setMailboxVisible] = useState(false);
+  const [receiveLetterVisible, setReceiveLetterVisible] = useState(true);
+  const [mailbox, setMailbox] = useState<[Message?]>([]);
   const [color, setColor] = useState('#FFF');
   const [body, setBody] = useState('');
 
@@ -183,6 +248,30 @@ function App(): JSX.Element {
     });
     console.log(response);
   };
+
+  const getLetters = async () => {
+    const response = await fetch(MESSAGE_URL, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+    });
+    const data = await response.json();
+    const letters: [Message?] = [];
+    for (const letter of data) {
+      letters.push(new Message(letter));
+    }
+    setMailbox(letters);
+    return letters;
+  };
+
+  getLetters();
+
+  RNShake.addListener(() => {
+    // Your code...
+    console.debug('hello');
+  });
 
   return (
     <View style={styles.background}>
@@ -254,11 +343,71 @@ function App(): JSX.Element {
             </View>
             <View style={styles.body}>
               <ScrollView style={styles.bodyBuffer}>
-                <LetterList />
+                <LetterList letters={mailbox} />
               </ScrollView>
             </View>
           </SafeAreaView>
         </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent={false}
+        visible={false}
+        onRequestClose={() => {
+          setMailboxVisible(!receiveLetterVisible);
+        }}>
+        <View style={styles.background}>
+          <SafeAreaView style={styles.background}>
+            <View style={styles.centeredHeader}>
+              <Text style={styles.appTitle}>reply to someone</Text>
+            </View>
+            <View style={styles.leftHeader}>
+              <DarkCircularButton
+                icon={require('./assets/close.png')}
+                onPress={() => setReceiveLetterVisible(!receiveLetterVisible)}
+              />
+            </View>
+            <View style={styles.rightHeader}>
+              <DarkCircularButton
+                icon={require('./assets/arrow.png')}
+                onPress={async () => {
+                  await postLetter();
+                  setColor('#FFF');
+                  setBody('');
+                  setReceiveLetterVisible(!receiveLetterVisible);
+                }}
+              />
+            </View>
+            <View style={styles.body}>
+              <LargeLetterSlot body="hello" hue="#fff" onPress={() => {}} />
+              <LetterInput input={body} onInputChange={onBodyChange} />
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent={false}
+        visible={false}
+        onRequestClose={() => {
+          setMailboxVisible(!receiveLetterVisible);
+        }}>
+        <SafeAreaView style={styles.background}>
+          <View style={styles.leftHeader}>
+            <DarkCircularButton
+              icon={require('./assets/close.png')}
+              onPress={() => {
+                setReceiveLetterVisible(!receiveLetterVisible);
+              }}
+            />
+          </View>
+          <View style={styles.body}>
+            <LargeLetterSlot body="hello" hue="#fff" onPress={() => {}} />
+            <ReplySlot body="hello" hue={''} onPress={undefined} />
+          </View>
+        </SafeAreaView>
       </Modal>
 
       <View style={styles.centeredHeader}>
@@ -319,6 +468,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   flexrowed: {
     flex: 1,
@@ -328,9 +478,17 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   listColumn: {
-    padding: 20,
+    padding: 10,
   },
   letterBox: {
+    flex: 2,
+    padding: 20,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    borderColor: 'white',
+    borderTopWidth: 1,
+  },
+  replyBox: {
     flex: 2,
     padding: 20,
     justifyContent: 'flex-start',
