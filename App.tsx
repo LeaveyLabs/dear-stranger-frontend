@@ -53,7 +53,7 @@ type LetterListProps = PropsWithChildren<{
 
 function MoodInput({input, onInputChange}: InputProps): JSX.Element {
   return (
-    <View style={{flex: 1, paddingBottom: 20}}>
+    <View style={styles.bottomSpacing}>
       <View style={styles.stacked}>
         <View style={styles.moodItem}>
           <Text style={styles.smallText}>
@@ -347,21 +347,13 @@ function App(): JSX.Element {
   const [lastSendTime, setLastSendTime] = useState(0);
   const [sentBacklog, setSentBacklog] = useState(0);
 
-  const onColorChange = (color: React.SetStateAction<string>) => {
-    setColor(color);
+  const onColorChange = (newColor: React.SetStateAction<string>) => {
+    setColor(newColor);
   };
 
-  const onBodyChange = (body: React.SetStateAction<string>) => {
-    setBody(body);
+  const onBodyChange = (newBody: React.SetStateAction<string>) => {
+    setBody(newBody);
   };
-
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    getLetters();
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
-  }, []);
 
   const storeUuid = async (value: string) => {
     try {
@@ -483,6 +475,15 @@ function App(): JSX.Element {
     console.log(openedLetters);
   };
 
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    getLetters();
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 2000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     initializeUuid();
     getLetters();
@@ -492,6 +493,7 @@ function App(): JSX.Element {
       console.log('hello');
       receiveLetter();
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -729,6 +731,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
+  },
+  bottomSpacing: {
+    flex: 1,
+    paddingBottom: 20,
   },
   moodItem: {
     marginTop: 25,
