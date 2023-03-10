@@ -27,6 +27,7 @@ import uuid from 'react-native-uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MESSAGE_URL = 'https://dear-stranger.herokuapp.com/messages';
+const FLAG_URL = 'https://dear-stranger.herokuapp.com/reports';
 
 type SmallButtonProps = PropsWithChildren<{
   icon: any;
@@ -40,6 +41,8 @@ type InputProps = PropsWithChildren<{
 
 type LetterProps = PropsWithChildren<{
   key: any;
+  uuid: string;
+  senderUuid: string;
   hue: string;
   body: string;
   timestamp: number;
@@ -47,8 +50,9 @@ type LetterProps = PropsWithChildren<{
 }>;
 
 type LetterListProps = PropsWithChildren<{
-  letters: [Message?];
-  onOpen: ((messages: [Message?]) => void) | undefined;
+  letters: [Letter?];
+  personalUuid: string;
+  onOpen: ((messages: [Letter?]) => void) | undefined;
 }>;
 
 function MoodInput({input, onInputChange}: InputProps): JSX.Element {
@@ -113,7 +117,7 @@ function EmptyMailbox(): JSX.Element {
 function WhiteCircularButton({icon, onPress}: SmallButtonProps): JSX.Element {
   return (
     <TouchableOpacity style={styles.mediumWhiteIcon} onPress={onPress}>
-      <Image style={styles.smallImage} source={icon} />
+      <Image style={styles.mediumImage} source={icon} />
     </TouchableOpacity>
   );
 }
@@ -121,6 +125,17 @@ function WhiteCircularButton({icon, onPress}: SmallButtonProps): JSX.Element {
 function DarkCircularButton({icon, onPress}: SmallButtonProps): JSX.Element {
   return (
     <TouchableOpacity style={styles.mediumIcon} onPress={onPress}>
+      <Image style={styles.smallImage} source={icon} />
+    </TouchableOpacity>
+  );
+}
+
+function SmallDarkCircularButton({
+  icon,
+  onPress,
+}: SmallButtonProps): JSX.Element {
+  return (
+    <TouchableOpacity style={styles.smallIcon} onPress={onPress}>
       <Image style={styles.smallImage} source={icon} />
     </TouchableOpacity>
   );
@@ -166,10 +181,10 @@ function LargeLetterSlot({body, hue, timestamp}: LetterProps): JSX.Element {
         <View style={styles.listColumn}>
           <View style={styles.verticalCentering}>
             <View style={styles.flexrowed}>
-              <View style={styles.smallRightPadding}>
+              <View style={styles.mediumRightPadding}>
                 <View style={hueCircle} />
               </View>
-              <View style={styles.smallRightPadding}>
+              <View style={styles.mediumRightPadding}>
                 <Text style={styles.grayText}>
                   {`${new Date(timestamp).toLocaleString()}`}
                 </Text>
@@ -185,17 +200,105 @@ function LargeLetterSlot({body, hue, timestamp}: LetterProps): JSX.Element {
   );
 }
 
-function ReplySlot({body}: LetterProps): JSX.Element {
-  return (
-    <View style={styles.smallReplyBox}>
-      <ScrollView>
-        <Text style={styles.letterText}>{body}</Text>
-      </ScrollView>
-    </View>
-  );
+function ReplySlot(
+  {uuid, body, timestamp}: LetterProps,
+  personalUuid: string,
+): JSX.Element {
+  const [isFlagged, setIsFlagged] = useState(false);
+
+  const postReport = async () => {
+    const response = await fetch(FLAG_URL, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        letterUuid: uuid,
+        reporterUuid: personalUuid,
+        explanation: body,
+      }),
+    });
+    console.log(response);
+  };
+
+  const createFlagAlert = () => {
+    Alert.alert(
+      'Flag this letter',
+      'Report this letter and permanently remove it from your mailbox',
+      [
+        {
+          text: 'Cancel',
+          onPress: () => {},
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            await postReport();
+            setIsFlagged(true);
+          },
+        },
+      ],
+    );
+  };
+
+  if (isFlagged) {
+    return <View />;
+  } else {
+    return (
+      <View style={[styles.smallReplyBox]}>
+        <ScrollView>
+          <View style={styles.smallBottomPadding}>
+            <View style={styles.flexrowed}>
+              <Text style={[styles.grayText, styles.smallRightPadding]}>
+                {`${new Date(timestamp).toLocaleString()}`}
+              </Text>
+              <View style={styles.verticalCentering}>
+                <SmallDarkCircularButton
+                  icon={require('./assets/flag.png')}
+                  onPress={createFlagAlert}
+                />
+              </View>
+            </View>
+          </View>
+          <Text style={styles.letterText}>{body}</Text>
+        </ScrollView>
+      </View>
+    );
+  }
 }
 
-class Message {
+const sortByTimestamp = (a: Letter | undefined, b: Letter | undefined) => {
+  if (!a || !b) {
+    return 0;
+  }
+  if (a.timestamp > b.timestamp) {
+    return -1;
+  }
+  if (a.timestamp === b.timestamp) {
+    return 0;
+  }
+  return 1;
+};
+
+const reverseSortByTimestamp = (
+  a: Letter | undefined,
+  b: Letter | undefined,
+) => {
+  if (!a || !b) {
+    return 0;
+  }
+  if (a.timestamp > b.timestamp) {
+    return 1;
+  }
+  if (a.timestamp === b.timestamp) {
+    return 0;
+  }
+  return -1;
+};
+
+class Letter {
   uuid: string;
   inResponseTo: string;
   body: string;
@@ -220,63 +323,63 @@ class Message {
   }
 }
 
+class Report {
+  letterUuid: string;
+  reporterUuid: string;
+  explanation: string;
+
+  constructor(obj: {
+    letterUuid: string;
+    reporterUuid: string;
+    explanation: string;
+  }) {
+    this.letterUuid = obj.letterUuid;
+    this.reporterUuid = obj.reporterUuid;
+    this.explanation = obj.explanation;
+  }
+}
+
 function LetterList({letters, onOpen}: LetterListProps): JSX.Element {
   let letterList: [LetterProps?] = [];
-  let letterMap: Map<string, Message> = new Map();
-  let threadMap: Map<string, [Message?]> = new Map();
+  let threadMap: Map<string, [Letter?]> = new Map();
 
   for (let i = 0; i < letters.length; ++i) {
     const letter = letters[i];
     if (!letter) {
       continue;
     }
-    letterMap.set(letter.uuid, letter);
-    let priorLetter = letter?.inResponseTo;
-    let isInitialLetter = !priorLetter;
-    if (isInitialLetter) {
-      threadMap.set(letter.uuid, []);
-    } else if (threadMap.has(priorLetter)) {
-      threadMap.get(priorLetter)?.push(letter);
+    if (!letter.inResponseTo) {
+      if (!threadMap.has(letter.uuid)) {
+        threadMap.set(letter.uuid, [letter]);
+      } else {
+        threadMap.get(letter.uuid)?.push(letter);
+      }
     } else {
-      threadMap.set(priorLetter, [letter]);
+      if (!threadMap.has(letter.inResponseTo)) {
+        threadMap.set(letter.inResponseTo, [letter]);
+      } else {
+        threadMap.get(letter.inResponseTo)?.push(letter);
+      }
     }
   }
-
-  // threadMap.forEach((replies, keyUuid) => {
-  //   const letter = letterMap.get(keyUuid);
-  //   if (letter) {
-  //     const letterJson = {
-  //       key: keyUuid,
-  //       body: letter.body,
-  //       hue: letter.hue,
-  //       timestamp: letter.timestamp,
-  //       onPress: () => {},
-  //     };
-  //     const thread: [Message?] = [letter];
-  //     if (onOpen) {
-  //       thread.concat(replies);
-  //       letterJson.onPress = () => {
-  //         onOpen(thread);
-  //       };
-  //     }
-  //     letterList.push(letterJson);
-  //   }
-  // });
 
   for (let i = 0; i < letters.length; ++i) {
     const letter = letters[i];
     if (letter) {
+      if (!threadMap.has(letter.uuid)) {
+        continue;
+      }
       const letterJson = {
         key: i,
+        uuid: letter.uuid,
+        senderUuid: letter.senderUuid,
         body: letter.body,
         hue: letter.hue,
         timestamp: letter.timestamp,
         onPress: () => {},
       };
-      const thread: [Message?] = [letter];
-      const replies = threadMap.get(letter.uuid);
-      if (onOpen) {
-        thread.concat(replies);
+      const thread = threadMap.get(letter.uuid)?.sort(reverseSortByTimestamp);
+      if (onOpen && thread) {
         letterJson.onPress = () => {
           onOpen(thread);
         };
@@ -296,7 +399,10 @@ function LetterList({letters, onOpen}: LetterListProps): JSX.Element {
   );
 }
 
-function LargeLetterList({letters}: LetterListProps): JSX.Element {
+function LargeLetterList({
+  letters,
+  personalUuid,
+}: LetterListProps): JSX.Element {
   let firstLetter: LetterProps | undefined;
   let letterList: [LetterProps?] = [];
   for (let i = 0; i < letters.length; ++i) {
@@ -304,6 +410,8 @@ function LargeLetterList({letters}: LetterListProps): JSX.Element {
     if (letter && i === 0) {
       firstLetter = {
         key: i,
+        uuid: letter.uuid,
+        senderUuid: letter.senderUuid,
         body: letter.body,
         hue: letter.hue,
         timestamp: letter.timestamp,
@@ -312,6 +420,8 @@ function LargeLetterList({letters}: LetterListProps): JSX.Element {
     } else if (letter) {
       letterList.push({
         key: i,
+        uuid: letter.uuid,
+        senderUuid: letter.senderUuid,
         body: letter.body,
         hue: letter.hue,
         timestamp: letter.timestamp,
@@ -324,7 +434,7 @@ function LargeLetterList({letters}: LetterListProps): JSX.Element {
       {firstLetter && LargeLetterSlot(firstLetter)}
       {letterList.map(letterProp => {
         if (letterProp) {
-          return ReplySlot(letterProp);
+          return ReplySlot(letterProp, personalUuid);
         }
       })}
     </View>
@@ -335,17 +445,19 @@ function App(): JSX.Element {
   const [writeBoxVisible, setwriteBoxVisible] = useState(false);
   const [mailboxVisible, setMailboxVisible] = useState(false);
   const [receiveLetterVisible, setReceiveLetterVisible] = useState(false);
-  const [nextReceivedLetter, setNextReceivedLetter] = useState<Message>();
+  const [nextReceivedLetter, setNextReceivedLetter] = useState<Letter>();
   const [openedLetterVisible, setOpenedLetterVisible] = useState(false);
-  const [mailbox, setMailbox] = useState<[Message?]>([]);
-  const [openedLetters, setOpenedLetters] = useState<[Message?]>([]);
+  const [mailbox, setMailbox] = useState<[Letter?]>([]);
+  const [openedLetters, setOpenedLetters] = useState<[Letter?]>([]);
   const [color, setColor] = useState('#ffffff');
   const [body, setBody] = useState('');
-  const [receivedLetters, setReceivedLetters] = useState<[Message?]>([]);
+  const [receivedLetters, setReceivedLetters] = useState<[Letter?]>([]);
   const [senderUuid, setSenderUuid] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [lastSendTime, setLastSendTime] = useState(0);
   const [sentBacklog, setSentBacklog] = useState(0);
+  const [myReports, setMyReports] = useState<[Report?]>([]);
+  const [guideVisible, setGuideVisibile] = useState(false);
 
   const onColorChange = (newColor: React.SetStateAction<string>) => {
     setColor(newColor);
@@ -367,16 +479,38 @@ function App(): JSX.Element {
     try {
       const value = await AsyncStorage.getItem('@uuid');
       if (value !== null) {
-        // value previously stored
         setSenderUuid(value);
+        return value;
       } else {
         const newUuid = uuid.v4();
         setSenderUuid(String(newUuid));
         storeUuid(String(newUuid));
+        return String(newUuid);
       }
     } catch (e) {
       // error reading value
     }
+  };
+
+  const getReports = async (senderUuid) => {
+    if (!senderUuid || senderUuid.length < 1) {
+      senderUuid = await initializeUuid();
+    }
+    const response = await fetch(FLAG_URL, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+    });
+    const data = await response.json();
+    const newReports: [Report?] = [];
+    for (const report of data) {
+      if (report.reporterUuid === senderUuid) {
+        newReports.push(new Report(report));
+      }
+    }
+    setMyReports(newReports);
   };
 
   const postLetter = async () => {
@@ -397,7 +531,11 @@ function App(): JSX.Element {
     console.log(response);
   };
 
-  const getLetters = async () => {
+  const getLetters = async (senderUuid) => {
+    if (!senderUuid || senderUuid.length < 1) {
+      senderUuid = await initializeUuid();
+    }
+
     const response = await fetch(MESSAGE_URL, {
       method: 'GET',
       headers: {
@@ -406,10 +544,31 @@ function App(): JSX.Element {
       },
     });
     const data = await response.json();
-    const letters: [Message?] = [];
+
+    const allLetters: [Letter?] = [];
+    const newLetters: [Letter?] = [];
     const myLetters: Set<string> = new Set();
     const myReplies: Set<string> = new Set();
+
     for (const letter of data) {
+      const isMyLetter = letter.senderUuid === senderUuid;
+      const isMyReport = myReports.find(
+        report => report?.letterUuid === letter.uuid,
+      );
+      if (!letter.senderUuid || !letter.uuid || isMyReport) {
+        continue;
+      }
+      if (isMyLetter) {
+        myLetters.add(letter.uuid);
+        myReplies.add(letter.inResponseTo);
+      }
+      allLetters.push(new Letter(letter));
+    }
+
+    for (const letter of allLetters) {
+      if (!letter) {
+        continue;
+      }
       const isMyLetter = letter.senderUuid === senderUuid;
       const isTheirReply = myLetters.has(letter.inResponseTo);
       const isRepliedLetter = myReplies.has(letter.uuid);
@@ -417,28 +576,34 @@ function App(): JSX.Element {
         (isMyLetter || isTheirReply || isRepliedLetter) &&
         letter.body.length > 0
       ) {
-        letters.push(new Message(letter));
+        newLetters.push(new Letter(letter));
         myLetters.add(letter.uuid);
-        myReplies.add(letter.inResponseTo);
+        if (letter.inResponseTo) {
+          myReplies.add(letter.inResponseTo);
+        }
       }
     }
-    letters.sort((a, b) => {
-      if (!a || !b) {
-        return 0;
-      }
-      if (a.timestamp > b.timestamp) {
-        return -1;
-      }
-      if (a.timestamp === b.timestamp) {
-        return 0;
-      }
-      return 1;
-    });
-    setMailbox(letters);
-    return letters;
+
+    newLetters.sort(sortByTimestamp);
+
+    setMailbox(newLetters);
+
+    console.log(newLetters);
+
+    // for (const letter of newLetters) {
+    //   if (mailbox.find(mailboxLetter => mailboxLetter?.body === letter?.body)) {
+    //     continue;
+    //   }
+    //   mailbox.push(letter);
+    // }
+
+    // mailbox.sort(sortByTimestamp);
+
+    // setMailbox(mailbox);
+    return mailbox;
   };
 
-  const receiveLetter = async () => {
+  const receiveLetter = async (senderUuid) => {
     const response = await fetch(MESSAGE_URL, {
       method: 'GET',
       headers: {
@@ -447,21 +612,29 @@ function App(): JSX.Element {
       },
     });
     const data = await response.json();
-    const letters: [Message?] = [];
+    const letters: [Letter?] = [];
+
+    if (!senderUuid || senderUuid.length < 1) {
+      await initializeUuid();
+    }
+
     for (const letter of data) {
       if (
-        !receivedLetters.includes(letter) &&
+        !receivedLetters.find(
+          receivedLetter => receivedLetter?.body === letter.body,
+        ) &&
         letter.body.length > 0 &&
         letter.hue &&
         letter.senderUuid !== senderUuid &&
         !letter.inResponseTo
       ) {
-        letters.push(new Message(letter));
+        letters.push(new Letter(letter));
       }
     }
     if (!letters.length) {
       return;
     }
+
     const randomLetter = letters[Math.floor(Math.random() * letters.length)];
     receivedLetters.push(randomLetter);
     setNextReceivedLetter(randomLetter);
@@ -469,16 +642,16 @@ function App(): JSX.Element {
     setReceiveLetterVisible(true);
   };
 
-  const openLetter = (letters: [Message?]) => {
+  const openLetter = (letters: [Letter?]) => {
     setOpenedLetters([...letters]);
     setOpenedLetterVisible(true);
-    console.log(openedLetters);
   };
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    getLetters();
     setTimeout(() => {
+      getReports(senderUuid);
+      getLetters(senderUuid);
       setRefreshing(false);
     }, 2000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -486,15 +659,24 @@ function App(): JSX.Element {
 
   useEffect(() => {
     initializeUuid();
-    getLetters();
-
-    RNShake.addListener(() => {
-      // Your code...
-      console.log('hello');
-      receiveLetter();
-    });
+    // RNShake.addListener(() => {
+    //   // Your code...
+    //   receiveLetter(senderUuid);
+    // });
+    // getLetters(senderUuid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (senderUuid && senderUuid.length > 0) {
+      RNShake.addListener(() => {
+        receiveLetter(senderUuid);
+      });
+      getLetters(senderUuid);
+      getReports(senderUuid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [senderUuid]);
 
   return (
     <View style={styles.background}>
@@ -513,7 +695,7 @@ function App(): JSX.Element {
         }}>
         <View style={styles.background}>
           <SafeAreaView style={styles.background}>
-            <View style={styles.centeredHeader}>
+            <View style={styles.slightRightHeader}>
               <Text style={styles.appTitle}>send a letter</Text>
             </View>
             <View style={styles.leftHeader}>
@@ -527,7 +709,7 @@ function App(): JSX.Element {
                 <DarkCircularButton
                   icon={require('./assets/arrow.png')}
                   onPress={async () => {
-                    if (new Date().getSeconds() - lastSendTime < 3600) {
+                    if (new Date().getTime() / 1000 - lastSendTime < 3600) {
                       Alert.alert(
                         'Too many messages at once',
                         'Come back and send your message sometime later',
@@ -542,7 +724,7 @@ function App(): JSX.Element {
                       return;
                     }
                     await postLetter();
-                    setLastSendTime(new Date().getSeconds());
+                    setLastSendTime(new Date().getTime() / 1000);
                     setSentBacklog(sentBacklog + 1);
                     setColor('#FFF');
                     setBody('');
@@ -589,7 +771,12 @@ function App(): JSX.Element {
                     />
                   }>
                   {mailbox.length > 0 && (
-                    <LetterList letters={mailbox} onOpen={openLetter} key="0" />
+                    <LetterList
+                      letters={mailbox}
+                      onOpen={openLetter}
+                      key="0"
+                      personalUuid={senderUuid}
+                    />
                   )}
                   {mailbox.length === 0 && <EmptyMailbox />}
                 </ScrollView>
@@ -602,7 +789,11 @@ function App(): JSX.Element {
               <View style={styles.leftHeader}>
                 <DarkCircularButton
                   icon={require('./assets/back-arrow.png')}
-                  onPress={() => setOpenedLetterVisible(false)}
+                  onPress={async () => {
+                    getReports(senderUuid);
+                    getLetters(senderUuid);
+                    setOpenedLetterVisible(false);
+                  }}
                 />
               </View>
               <View style={styles.body}>
@@ -611,6 +802,7 @@ function App(): JSX.Element {
                     <LargeLetterList
                       letters={openedLetters}
                       onOpen={() => {}}
+                      personalUuid={senderUuid}
                     />
                   )}
                 </ScrollView>
@@ -625,7 +817,7 @@ function App(): JSX.Element {
         transparent={false}
         visible={receiveLetterVisible}
         onRequestClose={() => {
-          setReceiveLetterVisible(!receiveLetterVisible);
+          setReceiveLetterVisible(false);
         }}>
         <View style={styles.background}>
           <SafeAreaView style={styles.background}>
@@ -635,7 +827,7 @@ function App(): JSX.Element {
             <View style={styles.leftHeader}>
               <DarkCircularButton
                 icon={require('./assets/close.png')}
-                onPress={() => setReceiveLetterVisible(!receiveLetterVisible)}
+                onPress={() => setReceiveLetterVisible(false)}
               />
             </View>
             <View style={styles.rightHeader}>
@@ -654,13 +846,17 @@ function App(): JSX.Element {
             </View>
             <View style={styles.body}>
               {nextReceivedLetter && (
-                <LargeLetterSlot
-                  body={nextReceivedLetter.body}
-                  hue={nextReceivedLetter.hue}
-                  timestamp={nextReceivedLetter.timestamp}
-                  onPress={() => {}}
-                  key={0}
-                />
+                <View>
+                  <LargeLetterSlot
+                    body={nextReceivedLetter.body}
+                    hue={nextReceivedLetter.hue}
+                    timestamp={nextReceivedLetter.timestamp}
+                    onPress={() => {}}
+                    key={0}
+                    uuid={nextReceivedLetter.uuid}
+                    senderUuid={nextReceivedLetter.senderUuid}
+                  />
+                </View>
               )}
               {nextReceivedLetter && (
                 <LetterInput input={body} onInputChange={onBodyChange} />
@@ -670,8 +866,66 @@ function App(): JSX.Element {
         </View>
       </Modal>
 
+      <Modal
+        animationType="fade"
+        transparent={false}
+        visible={guideVisible}
+        onRequestClose={() => {
+          setGuideVisibile(false);
+        }}>
+        <SafeAreaView style={styles.background}>
+          <View style={styles.leftHeader}>
+            <DarkCircularButton
+              icon={require('./assets/close.png')}
+              onPress={() => setGuideVisibile(false)}
+            />
+          </View>
+          <View style={styles.slightLeftHeader}>
+            <Text style={styles.appTitle}>so, what is this app</Text>
+          </View>
+          <View style={styles.body}>
+            <View style={styles.bodyBuffer}>
+              <View style={styles.guidanceBox}>
+                <Text style={styles.guidanceText}>
+                  life can be lonely
+                  {'\n'}
+                </Text>
+                <Text style={styles.guidanceText}>
+                  write what's been making it difficult for you
+                  {'\n'}
+                </Text>
+                <Text style={styles.guidanceText}>
+                  or support others who are in a rough patch
+                  {'\n'}
+                </Text>
+                <Text style={styles.guidanceText}>
+                  the only requirement is compassion
+                  {'\n'}
+                </Text>
+                <Text style={styles.guidanceText}>
+                  everything's anonymous
+                  {'\n'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
       <View style={styles.centeredHeader}>
-        <Text style={styles.appTitle}>dear someone</Text>
+        <View style={styles.flexrowed}>
+          <View style={styles.smallRightPadding}>
+            <Text style={styles.appTitle}>dear someone</Text>
+          </View>
+          <View style={styles.verticalCentering}>
+            <SmallDarkCircularButton
+              icon={require('./assets/question.png')}
+              onPress={() => {
+                setGuideVisibile(true);
+              }}
+            />
+          </View>
+        </View>
       </View>
 
       <View style={styles.rightFooter}>
@@ -684,8 +938,9 @@ function App(): JSX.Element {
       <View style={styles.leftFooter}>
         <WhiteCircularButton
           icon={require('./assets/mail.png')}
-          onPress={() => {
-            getLetters();
+          onPress={async () => {
+            getReports(senderUuid);
+            getLetters(senderUuid);
             setMailboxVisible(true);
           }}
         />
@@ -703,7 +958,17 @@ const styles = StyleSheet.create({
   },
   centeredHeader: {
     position: 'absolute',
-    left: '34%',
+    left: '32%',
+    top: 60,
+  },
+  slightRightHeader: {
+    position: 'absolute',
+    left: '35%',
+    top: 60,
+  },
+  slightLeftHeader: {
+    position: 'absolute',
+    left: '29%',
     top: 60,
   },
   someoneHeader: {
@@ -731,6 +996,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
+  },
+  guidanceBox: {
+    padding: 20,
   },
   bottomSpacing: {
     flex: 1,
@@ -796,6 +1064,10 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 15,
   },
+  guidanceText: {
+    color: 'white',
+    fontSize: 17,
+  },
   listItem: {
     borderColor: 'white',
     borderBottomWidth: 1,
@@ -847,12 +1119,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  smallImage: {
+  smallIcon: {
+    height: 10,
+    width: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediumImage: {
     height: 30,
     width: 30,
   },
-  smallRightPadding: {
+  smallImage: {
+    height: 20,
+    width: 20,
+  },
+  mediumRightPadding: {
     paddingRight: 20,
+  },
+  smallRightPadding: {
+    paddingRight: 10,
+  },
+  smallBottomPadding: {
+    paddingBottom: 10,
   },
   rightFooter: {
     position: 'absolute',
