@@ -47,6 +47,8 @@ type LetterProps = PropsWithChildren<{
   body: string;
   timestamp: number;
   onPress: ((event: GestureResponderEvent) => void) | undefined;
+  isFlaggable: boolean | undefined;
+  onFlag: (() => void) | undefined;
 }>;
 
 type LetterListProps = PropsWithChildren<{
@@ -80,18 +82,24 @@ function MoodInput({input, onInputChange}: InputProps): JSX.Element {
 function LetterInput({input, onInputChange}: InputProps): JSX.Element {
   return (
     <View style={styles.letterBox}>
-      <TextInput
-        multiline
-        numberOfLines={10}
-        maxLength={1000}
-        style={styles.letterText}
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholder="things to get off your chest, thoughtful remarks, crazy life stories (minimum 50 characters)"
-        placeholderTextColor="#808080"
-        onChangeText={onInputChange}
-        value={input}
-      />
+      <View style={styles.smallBottomPadding}>
+        <TextInput
+          multiline
+          numberOfLines={10}
+          maxLength={1000}
+          style={styles.letterText}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="things to get off your chest, thoughtful remarks, crazy life stories (minimum 50 characters)"
+          placeholderTextColor="#808080"
+          onChangeText={onInputChange}
+          value={input}
+        />
+      </View>
+      <Text style={[styles.grayText]}>
+        {(input.length && input.length < 50 && `${input.length}/${50}`) ||
+          (!input.length && '')}
+      </Text>
     </View>
   );
 }
@@ -99,7 +107,8 @@ function LetterInput({input, onInputChange}: InputProps): JSX.Element {
 function Introduction(): JSX.Element {
   return (
     <View style={styles.mediumView}>
-      <Text style={styles.mediumText}>shake to receive someone's letter.</Text>
+      <Text style={styles.mediumText}>shake to receive someone's letter</Text>
+      <Text style={styles.smallText}>it may take a few seconds</Text>
     </View>
   );
 }
@@ -167,59 +176,18 @@ function LetterSlot({body, hue, onPress}: LetterProps): JSX.Element {
   );
 }
 
-function LargeLetterSlot({body, hue, timestamp}: LetterProps): JSX.Element {
+function LargeLetterSlot({
+  body,
+  hue,
+  timestamp,
+  isFlaggable,
+  onFlag,
+}: LetterProps): JSX.Element {
   const hueCircle = {
     height: 30,
     width: 30,
     borderRadius: 15,
     backgroundColor: hue,
-  };
-
-  return (
-    <View style={styles.letterstacked}>
-      <ScrollView>
-        <View style={styles.listColumn}>
-          <View style={styles.verticalCentering}>
-            <View style={styles.flexrowed}>
-              <View style={styles.mediumRightPadding}>
-                <View style={hueCircle} />
-              </View>
-              <View style={styles.mediumRightPadding}>
-                <Text style={styles.grayText}>
-                  {`${new Date(timestamp).toLocaleString()}`}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-        <View style={styles.listColumn}>
-          <Text style={styles.letterText}>{body}</Text>
-        </View>
-      </ScrollView>
-    </View>
-  );
-}
-
-function ReplySlot(
-  {uuid, body, timestamp}: LetterProps,
-  personalUuid: string,
-): JSX.Element {
-  const [isFlagged, setIsFlagged] = useState(false);
-
-  const postReport = async () => {
-    const response = await fetch(FLAG_URL, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        letterUuid: uuid,
-        reporterUuid: personalUuid,
-        explanation: body,
-      }),
-    });
-    console.log(response);
   };
 
   const createFlagAlert = () => {
@@ -235,7 +203,88 @@ function ReplySlot(
         {
           text: 'Confirm',
           onPress: async () => {
-            await postReport();
+            if (onFlag) {
+              onFlag();
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  return (
+    <View style={styles.letterstacked}>
+      <ScrollView>
+        <View style={styles.listColumn}>
+          <View style={styles.verticalCentering}>
+            <View style={styles.flexrowed}>
+              <View style={styles.mediumRightPadding}>
+                <View style={hueCircle} />
+              </View>
+              <View style={styles.smallRightPadding}>
+                <Text style={styles.grayText}>
+                  {`${new Date(timestamp).toLocaleString()}`}
+                </Text>
+              </View>
+              {isFlaggable && (
+                <View>
+                  <SmallDarkCircularButton
+                    icon={require('./assets/flag.png')}
+                    onPress={createFlagAlert}
+                  />
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+        <View style={styles.listColumn}>
+          <Text style={styles.letterText}>{body}</Text>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+async function postReport(
+  letterUuid: string,
+  reporterUuid: string,
+  explanation: string,
+) {
+  const response = await fetch(FLAG_URL, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      letterUuid: letterUuid,
+      reporterUuid: reporterUuid,
+      explanation: explanation,
+    }),
+  });
+  console.log(response);
+}
+
+function ReplySlot(
+  {uuid, body, timestamp}: LetterProps,
+  personalUuid: string,
+): JSX.Element {
+  const [isFlagged, setIsFlagged] = useState(false);
+
+  const createFlagAlert = () => {
+    Alert.alert(
+      'Flag this letter',
+      'Report this letter and permanently remove it from your mailbox',
+      [
+        {
+          text: 'Cancel',
+          onPress: () => {},
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            await postReport(uuid, personalUuid, body);
             setIsFlagged(true);
           },
         },
@@ -377,6 +426,8 @@ function LetterList({letters, onOpen}: LetterListProps): JSX.Element {
         hue: letter.hue,
         timestamp: letter.timestamp,
         onPress: () => {},
+        isFlaggable: false,
+        onFlag: () => {},
       };
       const thread = threadMap.get(letter.uuid)?.sort(reverseSortByTimestamp);
       if (onOpen && thread) {
@@ -416,6 +467,8 @@ function LargeLetterList({
         hue: letter.hue,
         timestamp: letter.timestamp,
         onPress: () => {},
+        isFlaggable: false,
+        onFlag: undefined,
       };
     } else if (letter) {
       letterList.push({
@@ -426,6 +479,8 @@ function LargeLetterList({
         hue: letter.hue,
         timestamp: letter.timestamp,
         onPress: () => {},
+        isFlaggable: true,
+        onFlag: undefined,
       });
     }
   }
@@ -444,7 +499,7 @@ function LargeLetterList({
 function App(): JSX.Element {
   const [writeBoxVisible, setwriteBoxVisible] = useState(false);
   const [mailboxVisible, setMailboxVisible] = useState(false);
-  const [receiveLetterVisible, setReceiveLetterVisible] = useState(false);
+  const [receiveLetterVisible, setReceiveLetterVisible] = useState(true);
   const [nextReceivedLetter, setNextReceivedLetter] = useState<Letter>();
   const [openedLetterVisible, setOpenedLetterVisible] = useState(false);
   const [mailbox, setMailbox] = useState<[Letter?]>([]);
@@ -458,6 +513,7 @@ function App(): JSX.Element {
   const [sentBacklog, setSentBacklog] = useState(0);
   const [myReports, setMyReports] = useState<[Report?]>([]);
   const [guideVisible, setGuideVisibile] = useState(false);
+  // const [isReceivingLetter, setIsReceivingLetter] = useState(false);
 
   const onColorChange = (newColor: React.SetStateAction<string>) => {
     setColor(newColor);
@@ -492,7 +548,7 @@ function App(): JSX.Element {
     }
   };
 
-  const getReports = async (senderUuid) => {
+  const getReports = async (senderUuid: any) => {
     if (!senderUuid || senderUuid.length < 1) {
       senderUuid = await initializeUuid();
     }
@@ -531,7 +587,7 @@ function App(): JSX.Element {
     console.log(response);
   };
 
-  const getLetters = async (senderUuid) => {
+  const getLetters = async (senderUuid: any) => {
     if (!senderUuid || senderUuid.length < 1) {
       senderUuid = await initializeUuid();
     }
@@ -603,7 +659,7 @@ function App(): JSX.Element {
     return mailbox;
   };
 
-  const receiveLetter = async (senderUuid) => {
+  const receiveLetter = async (senderUuid: string) => {
     const response = await fetch(MESSAGE_URL, {
       method: 'GET',
       headers: {
@@ -637,6 +693,7 @@ function App(): JSX.Element {
 
     const randomLetter = letters[Math.floor(Math.random() * letters.length)];
     receivedLetters.push(randomLetter);
+    console.log(randomLetter);
     setNextReceivedLetter(randomLetter);
     setReceivedLetters([...receivedLetters]);
     setReceiveLetterVisible(true);
@@ -649,9 +706,10 @@ function App(): JSX.Element {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => {
-      getReports(senderUuid);
-      getLetters(senderUuid);
+    setTimeout(async () => {
+      await getReports(senderUuid);
+      await getLetters(senderUuid);
+
       setRefreshing(false);
     }, 2000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -670,7 +728,11 @@ function App(): JSX.Element {
   useEffect(() => {
     if (senderUuid && senderUuid.length > 0) {
       RNShake.addListener(() => {
-        receiveLetter(senderUuid);
+        // setIsReceivingLetter(true);
+        setTimeout(async () => {
+          await receiveLetter(senderUuid);
+          // setIsReceivingLetter(false);
+        }, 2000);
       });
       getLetters(senderUuid);
       getReports(senderUuid);
@@ -709,7 +771,7 @@ function App(): JSX.Element {
                 <DarkCircularButton
                   icon={require('./assets/arrow.png')}
                   onPress={async () => {
-                    if (new Date().getTime() / 1000 - lastSendTime < 3600) {
+                    if (new Date().getTime() / 1000 - lastSendTime < 300) {
                       Alert.alert(
                         'Too many messages at once',
                         'Come back and send your message sometime later',
@@ -790,8 +852,8 @@ function App(): JSX.Element {
                 <DarkCircularButton
                   icon={require('./assets/back-arrow.png')}
                   onPress={async () => {
-                    getReports(senderUuid);
-                    getLetters(senderUuid);
+                    await getReports(senderUuid);
+                    await getLetters(senderUuid);
                     setOpenedLetterVisible(false);
                   }}
                 />
@@ -855,6 +917,15 @@ function App(): JSX.Element {
                     key={0}
                     uuid={nextReceivedLetter.uuid}
                     senderUuid={nextReceivedLetter.senderUuid}
+                    isFlaggable={true}
+                    onFlag={async () => {
+                      await postReport(
+                        nextReceivedLetter.uuid,
+                        nextReceivedLetter.senderUuid,
+                        nextReceivedLetter.body,
+                      );
+                      setReceiveLetterVisible(false);
+                    }}
                   />
                 </View>
               )}
@@ -881,29 +952,29 @@ function App(): JSX.Element {
             />
           </View>
           <View style={styles.slightLeftHeader}>
-            <Text style={styles.appTitle}>so, what is this app</Text>
+            <Text style={styles.appTitle}>so, what is this app?</Text>
           </View>
           <View style={styles.body}>
             <View style={styles.bodyBuffer}>
               <View style={styles.guidanceBox}>
                 <Text style={styles.guidanceText}>
-                  life can be lonely
+                  get things off your chest, listen to others
                   {'\n'}
                 </Text>
                 <Text style={styles.guidanceText}>
-                  write what's been making it difficult for you
+                  you can do 2 things in this app
                   {'\n'}
                 </Text>
                 <Text style={styles.guidanceText}>
-                  or support others who are in a rough patch
+                  1. send an anonymous letter
                   {'\n'}
                 </Text>
                 <Text style={styles.guidanceText}>
-                  the only requirement is compassion
+                  2. reply an anonymous letter
                   {'\n'}
                 </Text>
                 <Text style={styles.guidanceText}>
-                  everything's anonymous
+                  if you find bad content, please flag it.
                   {'\n'}
                 </Text>
               </View>
@@ -1018,7 +1089,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   letterstacked: {
-    flex: 1,
     flexDirection: 'column',
     padding: 20,
   },
@@ -1066,7 +1136,7 @@ const styles = StyleSheet.create({
   },
   guidanceText: {
     color: 'white',
-    fontSize: 17,
+    fontSize: 15,
   },
   listItem: {
     borderColor: 'white',
