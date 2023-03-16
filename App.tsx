@@ -250,6 +250,7 @@ async function postReport(
   reporterUuid: string,
   explanation: string,
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const response = await fetch(FLAG_URL, {
     method: 'POST',
     headers: {
@@ -262,7 +263,7 @@ async function postReport(
       explanation: explanation,
     }),
   });
-  console.log(response);
+  // console.log(response);
 }
 
 function ReplySlot(
@@ -499,7 +500,7 @@ function LargeLetterList({
 function App(): JSX.Element {
   const [writeBoxVisible, setwriteBoxVisible] = useState(false);
   const [mailboxVisible, setMailboxVisible] = useState(false);
-  const [receiveLetterVisible, setReceiveLetterVisible] = useState(true);
+  const [receiveLetterVisible, setReceiveLetterVisible] = useState(false);
   const [nextReceivedLetter, setNextReceivedLetter] = useState<Letter>();
   const [openedLetterVisible, setOpenedLetterVisible] = useState(false);
   const [mailbox, setMailbox] = useState<[Letter?]>([]);
@@ -570,6 +571,7 @@ function App(): JSX.Element {
   };
 
   const postLetter = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const response = await fetch(MESSAGE_URL, {
       method: 'POST',
       headers: {
@@ -584,7 +586,7 @@ function App(): JSX.Element {
         inResponseTo: receiveLetterVisible ? nextReceivedLetter?.uuid : null,
       }),
     });
-    console.log(response);
+    // console.log(response);
   };
 
   const getLetters = async (senderUuid: any) => {
@@ -644,7 +646,7 @@ function App(): JSX.Element {
 
     setMailbox(newLetters);
 
-    console.log(newLetters);
+    // console.log(newLetters);
 
     // for (const letter of newLetters) {
     //   if (mailbox.find(mailboxLetter => mailboxLetter?.body === letter?.body)) {
@@ -693,7 +695,7 @@ function App(): JSX.Element {
 
     const randomLetter = letters[Math.floor(Math.random() * letters.length)];
     receivedLetters.push(randomLetter);
-    console.log(randomLetter);
+    // console.log(randomLetter);
     setNextReceivedLetter(randomLetter);
     setReceivedLetters([...receivedLetters]);
     setReceiveLetterVisible(true);
