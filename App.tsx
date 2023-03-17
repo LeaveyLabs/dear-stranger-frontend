@@ -58,13 +58,27 @@ type LetterListProps = PropsWithChildren<{
 }>;
 
 function MoodInput({input, onInputChange}: InputProps): JSX.Element {
+  const hueCircle = {
+    height: 20,
+    width: 20,
+    borderRadius: 15,
+    backgroundColor: input,
+  };
+
   return (
     <View style={styles.bottomSpacing}>
       <View style={styles.stacked}>
         <View style={styles.moodItem}>
-          <Text style={styles.smallText}>
-            pick a color that describes how you feel
-          </Text>
+          <View style={styles.flexrowed}>
+            <View style={[styles.smallRightPadding]}>
+              <View style={hueCircle} />
+            </View>
+            <View>
+              <Text style={styles.smallText}>
+                pick a color that describes how you feel
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
       <ColorPicker
@@ -89,7 +103,7 @@ function LetterInput({input, onInputChange}: InputProps): JSX.Element {
           maxLength={1000}
           style={styles.letterText}
           autoCapitalize="none"
-          autoCorrect={false}
+          autoCorrect={true}
           placeholder="things to get off your chest, thoughtful remarks, crazy life stories (minimum 50 characters)"
           placeholderTextColor="#808080"
           onChangeText={onInputChange}
@@ -760,7 +774,7 @@ function App(): JSX.Element {
         <View style={styles.background}>
           <SafeAreaView style={styles.background}>
             <View style={styles.slightRightHeader}>
-              <Text style={styles.appTitle}>send a letter</Text>
+              <Text style={styles.appTitle}> send a letter </Text>
             </View>
             <View style={styles.leftHeader}>
               <DarkCircularButton
@@ -960,7 +974,7 @@ function App(): JSX.Element {
             <View style={styles.bodyBuffer}>
               <View style={styles.guidanceBox}>
                 <Text style={styles.guidanceText}>
-                  get things off your chest, listen to others
+                  tldr: get things off your chest, listen to others
                   {'\n'}
                 </Text>
                 <Text style={styles.guidanceText}>
@@ -972,7 +986,7 @@ function App(): JSX.Element {
                   {'\n'}
                 </Text>
                 <Text style={styles.guidanceText}>
-                  2. reply an anonymous letter
+                  2. reply to an anonymous letter
                   {'\n'}
                 </Text>
                 <Text style={styles.guidanceText}>
@@ -1099,7 +1113,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   flexrowed: {
-    flex: 1,
     flexDirection: 'row',
   },
   bodyBuffer: {
@@ -1208,11 +1221,23 @@ const styles = StyleSheet.create({
   mediumRightPadding: {
     paddingRight: 20,
   },
+  mediumLeftPadding: {
+    paddingLeft: 20,
+  },
+  smallLeftPadding: {
+    paddingLeft: 10,
+  },
   smallRightPadding: {
     paddingRight: 10,
   },
   smallBottomPadding: {
     paddingBottom: 10,
+  },
+  verySmallLeftPadding: {
+    paddingLeft: 5,
+  },
+  verySmallRightPadding: {
+    paddingRight: 5,
   },
   rightFooter: {
     position: 'absolute',
