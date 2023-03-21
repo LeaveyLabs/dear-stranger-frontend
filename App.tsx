@@ -533,7 +533,6 @@ function App(): JSX.Element {
   const [myReports, setMyReports] = useState<[Report?]>([]);
   const [guideVisible, setGuideVisibile] = useState(false);
   // const [isReceivingLetter, setIsReceivingLetter] = useState(false);
-  
 
   const onColorChange = (newColor: React.SetStateAction<string>) => {
     setColor(newColor);
