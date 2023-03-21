@@ -19,12 +19,16 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Dimensions,
 } from 'react-native';
 import RNShake from 'react-native-shake';
 
 import ColorPicker from 'react-native-wheel-color-picker';
 import uuid from 'react-native-uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const vh = Dimensions.get('window').height / 100;
+const vm = Dimensions.get('window').width / 100;
 
 const MESSAGE_URL = 'https://dear-stranger.herokuapp.com/messages';
 const FLAG_URL = 'https://dear-stranger.herokuapp.com/reports';
@@ -529,6 +533,7 @@ function App(): JSX.Element {
   const [myReports, setMyReports] = useState<[Report?]>([]);
   const [guideVisible, setGuideVisibile] = useState(false);
   // const [isReceivingLetter, setIsReceivingLetter] = useState(false);
+  
 
   const onColorChange = (newColor: React.SetStateAction<string>) => {
     setColor(newColor);
@@ -776,6 +781,10 @@ function App(): JSX.Element {
             <View style={styles.slightRightHeader}>
               <Text style={styles.appTitle}> send a letter </Text>
             </View>
+            <View style={styles.body}>
+              <MoodInput input={color} onInputChange={onColorChange} />
+              <LetterInput input={body} onInputChange={onBodyChange} />
+            </View>
             <View style={styles.leftHeader}>
               <DarkCircularButton
                 icon={require('./assets/close.png')}
@@ -811,10 +820,6 @@ function App(): JSX.Element {
                 />
               )}
             </View>
-            <View style={styles.body}>
-              <MoodInput input={color} onInputChange={onColorChange} />
-              <LetterInput input={body} onInputChange={onBodyChange} />
-            </View>
           </SafeAreaView>
         </View>
       </Modal>
@@ -831,12 +836,6 @@ function App(): JSX.Element {
             <SafeAreaView style={styles.background}>
               <View style={styles.mailboxHeader}>
                 <Text style={styles.appTitle}>mailbox</Text>
-              </View>
-              <View style={styles.leftHeader}>
-                <DarkCircularButton
-                  icon={require('./assets/close.png')}
-                  onPress={() => setMailboxVisible(false)}
-                />
               </View>
               <View style={styles.body}>
                 <ScrollView
@@ -859,21 +858,17 @@ function App(): JSX.Element {
                   {mailbox.length === 0 && <EmptyMailbox />}
                 </ScrollView>
               </View>
+              <View style={styles.leftHeader}>
+                <DarkCircularButton
+                  icon={require('./assets/close.png')}
+                  onPress={() => setMailboxVisible(false)}
+                />
+              </View>
             </SafeAreaView>
           </View>
         ) : (
           <View style={styles.background}>
             <SafeAreaView style={styles.background}>
-              <View style={styles.leftHeader}>
-                <DarkCircularButton
-                  icon={require('./assets/back-arrow.png')}
-                  onPress={async () => {
-                    await getReports(senderUuid);
-                    await getLetters(senderUuid);
-                    setOpenedLetterVisible(false);
-                  }}
-                />
-              </View>
               <View style={styles.body}>
                 <ScrollView style={styles.bodyBuffer}>
                   {openedLetters && (
@@ -884,6 +879,16 @@ function App(): JSX.Element {
                     />
                   )}
                 </ScrollView>
+              </View>
+              <View style={styles.leftHeader}>
+                <DarkCircularButton
+                  icon={require('./assets/back-arrow.png')}
+                  onPress={async () => {
+                    await getReports(senderUuid);
+                    await getLetters(senderUuid);
+                    setOpenedLetterVisible(false);
+                  }}
+                />
               </View>
             </SafeAreaView>
           </View>
@@ -901,26 +906,6 @@ function App(): JSX.Element {
           <SafeAreaView style={styles.background}>
             <View style={styles.someoneHeader}>
               <Text style={styles.appTitle}>reply to someone</Text>
-            </View>
-            <View style={styles.leftHeader}>
-              <DarkCircularButton
-                icon={require('./assets/close.png')}
-                onPress={() => setReceiveLetterVisible(false)}
-              />
-            </View>
-            <View style={styles.rightHeader}>
-              {body.length > 50 && (
-                <DarkCircularButton
-                  icon={require('./assets/arrow.png')}
-                  onPress={async () => {
-                    await postLetter();
-                    setSentBacklog(0);
-                    setColor('#FFF');
-                    setBody('');
-                    setReceiveLetterVisible(false);
-                  }}
-                />
-              )}
             </View>
             <View style={styles.body}>
               {nextReceivedLetter && (
@@ -947,6 +932,26 @@ function App(): JSX.Element {
               )}
               {nextReceivedLetter && (
                 <LetterInput input={body} onInputChange={onBodyChange} />
+              )}
+            </View>
+            <View style={styles.leftHeader}>
+              <DarkCircularButton
+                icon={require('./assets/close.png')}
+                onPress={() => setReceiveLetterVisible(false)}
+              />
+            </View>
+            <View style={styles.rightHeader}>
+              {body.length > 50 && (
+                <DarkCircularButton
+                  icon={require('./assets/arrow.png')}
+                  onPress={async () => {
+                    await postLetter();
+                    setSentBacklog(0);
+                    setColor('#FFF');
+                    setBody('');
+                    setReceiveLetterVisible(false);
+                  }}
+                />
               )}
             </View>
           </SafeAreaView>
@@ -1039,40 +1044,38 @@ function App(): JSX.Element {
 const styles = StyleSheet.create({
   leftHeader: {
     position: 'absolute',
-    left: 0,
-    top: 30,
-    padding: 30,
+    left: 6 * vm,
+    top: 6 * vh,
   },
   centeredHeader: {
     position: 'absolute',
-    left: '32%',
-    top: 60,
+    left: '31%',
+    top: 6 * vh,
   },
   slightRightHeader: {
     position: 'absolute',
-    left: '35%',
-    top: 60,
+    left: '34%',
+    top: 6 * vh,
   },
   slightLeftHeader: {
     position: 'absolute',
-    left: '29%',
-    top: 60,
+    left: '28%',
+    top: 6 * vh,
   },
   someoneHeader: {
     position: 'absolute',
-    left: '31%',
-    top: 60,
+    left: '30%',
+    top: 6 * vh,
   },
   mailboxHeader: {
     position: 'absolute',
     left: '40%',
-    top: 60,
+    top: 6 * vh,
   },
   rightHeader: {
     position: 'absolute',
-    right: 0,
-    top: 30,
-    padding: 30,
+    right: 6 * vm,
+    top: 6 * vh,
   },
   body: {
     flex: 1,
@@ -1122,7 +1125,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   letterBox: {
-    flex: 2,
+    flex: 1.5,
     padding: 20,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
