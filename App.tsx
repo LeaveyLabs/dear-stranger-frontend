@@ -1043,38 +1043,38 @@ function App(): JSX.Element {
 const styles = StyleSheet.create({
   leftHeader: {
     position: 'absolute',
-    left: 6 * vm,
-    top: 6 * vh,
+    left: 7 * vm,
+    top: 7 * vh,
   },
   centeredHeader: {
     position: 'absolute',
     left: '31%',
-    top: 6 * vh,
+    top: 7 * vh,
   },
   slightRightHeader: {
     position: 'absolute',
     left: '34%',
-    top: 6 * vh,
+    top: 7 * vh,
   },
   slightLeftHeader: {
     position: 'absolute',
     left: '28%',
-    top: 6 * vh,
+    top: 7 * vh,
   },
   someoneHeader: {
     position: 'absolute',
     left: '30%',
-    top: 6 * vh,
+    top: 7 * vh,
   },
   mailboxHeader: {
     position: 'absolute',
     left: '40%',
-    top: 6 * vh,
+    top: 7 * vh,
   },
   rightHeader: {
     position: 'absolute',
-    right: 6 * vm,
-    top: 6 * vh,
+    right: 7 * vm,
+    top: 7 * vh,
   },
   body: {
     flex: 1,
@@ -1094,7 +1094,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   moodItem: {
-    marginTop: 25,
+    marginTop: 20,
   },
   flexbox: {
     flex: 1,
