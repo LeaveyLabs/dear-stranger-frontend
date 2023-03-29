@@ -73,16 +73,16 @@ function MoodInput({input, onInputChange}: InputProps): JSX.Element {
     <View style={styles.bottomSpacing}>
       <View style={styles.stacked}>
         <View style={styles.moodItem}>
-          <View style={styles.flexrowed}>
-            <View style={[styles.smallRightPadding]}>
+          {/* <View style={styles.flexrowed}> */}
+            {/* <View style={[styles.smallRightPadding]}>
               <View style={hueCircle} />
-            </View>
+            </View> */}
             <View>
               <Text style={styles.smallText}>
                 pick a color that describes how you feel
               </Text>
             </View>
-          </View>
+          {/* </View> */}
         </View>
       </View>
       <ColorPicker
@@ -523,7 +523,7 @@ function App(): JSX.Element {
   const [openedLetterVisible, setOpenedLetterVisible] = useState(false);
   const [mailbox, setMailbox] = useState<[Letter?]>([]);
   const [openedLetters, setOpenedLetters] = useState<[Letter?]>([]);
-  const [color, setColor] = useState('#ffffff');
+  const [color, setColor] = useState('');
   const [body, setBody] = useState('');
   const [receivedLetters, setReceivedLetters] = useState<[Letter?]>([]);
   const [senderUuid, setSenderUuid] = useState('');
