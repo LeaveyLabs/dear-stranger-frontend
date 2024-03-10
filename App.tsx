@@ -5,27 +5,27 @@
  * @format
  */
 
-import React, {PropsWithChildren, useEffect, useState} from 'react';
 import {
+  Alert,
+  Dimensions,
+  GestureResponderEvent,
+  Image,
+  Modal,
+  RefreshControl,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
-  Image,
   TouchableOpacity,
-  Modal,
-  GestureResponderEvent,
-  ScrollView,
-  RefreshControl,
-  Alert,
-  Dimensions,
+  View,
 } from 'react-native';
-import RNShake from 'react-native-shake';
+import React, {PropsWithChildren, useEffect, useState} from 'react';
 
-import ColorPicker from 'react-native-wheel-color-picker';
-import uuid from 'react-native-uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ColorPicker from 'react-native-wheel-color-picker';
+import RNShake from 'react-native-shake';
+import uuid from 'react-native-uuid';
 
 const vh = Dimensions.get('window').height / 100;
 const vm = Dimensions.get('window').width / 100;
@@ -62,37 +62,33 @@ type LetterListProps = PropsWithChildren<{
 }>;
 
 function MoodInput({input, onInputChange}: InputProps): JSX.Element {
-  const hueCircle = {
-    height: 20,
-    width: 20,
-    borderRadius: 15,
-    backgroundColor: input,
-  };
-
   return (
     <View style={styles.bottomSpacing}>
       <View style={styles.stacked}>
         <View style={styles.moodItem}>
           {/* <View style={styles.flexrowed}> */}
-            {/* <View style={[styles.smallRightPadding]}>
+          {/* <View style={[styles.smallRightPadding]}>
               <View style={hueCircle} />
             </View> */}
-            <View>
-              <Text style={styles.smallText}>
-                pick a color that describes how you feel
-              </Text>
-            </View>
+          <View>
+            <Text style={styles.smallText}>
+              pick a color that describes how you feel
+            </Text>
+          </View>
           {/* </View> */}
         </View>
       </View>
-      <ColorPicker
-        color={input}
-        onColorChange={onInputChange}
-        thumbSize={30}
-        row={false}
-        sliderHidden={true}
-        swatches={false}
-      />
+
+      <View>
+        <ColorPicker
+          color={input}
+          onColorChange={onInputChange}
+          thumbSize={30}
+          row={false}
+          sliderHidden={true}
+          swatches={false}
+        />
+      </View>
     </View>
   );
 }
@@ -101,18 +97,20 @@ function LetterInput({input, onInputChange}: InputProps): JSX.Element {
   return (
     <View style={styles.letterBox}>
       <View style={styles.smallBottomPadding}>
-        <TextInput
-          multiline
-          numberOfLines={10}
-          maxLength={1000}
-          style={styles.letterText}
-          autoCapitalize="none"
-          autoCorrect={true}
-          placeholder="things to get off your chest, thoughtful remarks, crazy life stories (minimum 50 characters)"
-          placeholderTextColor="#808080"
-          onChangeText={onInputChange}
-          value={input}
-        />
+        <View>
+          <TextInput
+            multiline={true}
+            numberOfLines={3}
+            maxLength={1000}
+            style={styles.letterInput}
+            autoCapitalize="none"
+            autoCorrect={true}
+            placeholder="things to get off your chest, thoughtful remarks, crazy life stories (minimum 50 characters)"
+            placeholderTextColor="#808080"
+            onChangeText={onInputChange}
+            value={input}
+          />
+        </View>
       </View>
       <Text style={[styles.grayText]}>
         {(input.length && input.length < 50 && `${input.length}/${50}`) ||
@@ -523,7 +521,7 @@ function App(): JSX.Element {
   const [openedLetterVisible, setOpenedLetterVisible] = useState(false);
   const [mailbox, setMailbox] = useState<[Letter?]>([]);
   const [openedLetters, setOpenedLetters] = useState<[Letter?]>([]);
-  const [color, setColor] = useState('');
+  const [color, setColor] = useState('#ffffff');
   const [body, setBody] = useState('');
   const [receivedLetters, setReceivedLetters] = useState<[Letter?]>([]);
   const [senderUuid, setSenderUuid] = useState('');
@@ -780,10 +778,10 @@ function App(): JSX.Element {
             <View style={styles.slightRightHeader}>
               <Text style={styles.appTitle}> send a letter </Text>
             </View>
-            <View style={styles.body}>
+            <ScrollView style={styles.body} automaticallyAdjustKeyboardInsets>
               <MoodInput input={color} onInputChange={onColorChange} />
               <LetterInput input={body} onInputChange={onBodyChange} />
-            </View>
+            </ScrollView>
             <View style={styles.leftHeader}>
               <DarkCircularButton
                 icon={require('./assets/close.png')}
@@ -906,7 +904,9 @@ function App(): JSX.Element {
             <View style={styles.someoneHeader}>
               <Text style={styles.appTitle}>reply to someone</Text>
             </View>
-            <View style={styles.body}>
+            <ScrollView
+              style={styles.body}
+              automaticallyAdjustKeyboardInsets={true}>
               {nextReceivedLetter && (
                 <View>
                   <LargeLetterSlot
@@ -932,7 +932,7 @@ function App(): JSX.Element {
               {nextReceivedLetter && (
                 <LetterInput input={body} onInputChange={onBodyChange} />
               )}
-            </View>
+            </ScrollView>
             <View style={styles.leftHeader}>
               <DarkCircularButton
                 icon={require('./assets/close.png')}
@@ -1116,6 +1116,7 @@ const styles = StyleSheet.create({
   },
   flexrowed: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   bodyBuffer: {
     marginTop: 20,
@@ -1124,7 +1125,6 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   letterBox: {
-    flex: 1.5,
     padding: 20,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
@@ -1132,7 +1132,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   replyBox: {
-    flex: 2,
+    // height: vh * 10,
     padding: 20,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
@@ -1150,6 +1150,11 @@ const styles = StyleSheet.create({
   letterText: {
     color: 'white',
     fontSize: 15,
+  },
+  letterInput: {
+    color: 'white',
+    fontSize: 15,
+    height: 45,
   },
   guidanceText: {
     color: 'white',
